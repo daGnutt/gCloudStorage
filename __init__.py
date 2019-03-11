@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
+import datetime
 import io
 import os
 
 from google.cloud import storage
 from google.oauth2 import service_account
 
-class GCloudStorage():
+class gCloudStorage():
     googleCredentials = None
     storageClient = None
 
-    def __init__(self, configfile=None, projectID=None):
-        if not isinstance(projectID, str):
-            raise ValueError("projectID must be a {} it was a {}".format(str, type(projectID)))
-
+    def __init__(self, configfile=None):
         if not isinstance(configfile, str):
             raise ValueError("configfile must be a {} it was a {}".format(str, type(configfile)))
         
@@ -21,7 +19,7 @@ class GCloudStorage():
             raise FileNotFoundError("Could not read configfile. Verify path and permissions")
 
         self.__loadSettings(configfile)
-        self.storageClient = storage.Client(credentials=self.googleCredentials, project=projectID)
+        self.storageClient = storage.Client(credentials=self.googleCredentials, project=self.googleCredentials.project_id)
 
     def __loadSettings(self, configfile):
         if isinstance(configfile, str):
@@ -30,37 +28,33 @@ class GCloudStorage():
 
         raise TypeError("Could not load Configfile")
 
-    def uploadFile(self, filepath, bucket, remotename):
+    def fileExists(self, bucket, remotename):
+        return self.storageClient.bucket(bucket).blob(remotename).exists()
+
+    def uploadFile(self, filepath, bucket, remotename, overwrite=False):
         if not isinstance(filepath, str):
             raise ValueError("filepath must be presented as a {} it was a {}".format(str, type(filepath)))
 
         if not os.access(filepath, os.R_OK):
             raise FileNotFoundError("Could not read the file {}. Verify path and permissions".format(filepath))
 
-        fileexists = self.storageClient.bucket(bucket).blob(remotename).exists()
+        fileexists = self.fileExists(bucket, remotename)
 
         if fileexists:
-            raise FileExistsError("File exists!")
+            if not overwrite:
+                raise FileExistsError("File exists!")
+            else:
+                self.storageClient.bucket(bucket).blob(remotename).delete()
 
         with open(filepath, 'r') as file_pointer:
             self.storageClient.bucket(bucket).blob(remotename).upload_from_file(file_pointer)
         return
 
     def createUploadURI(self, bucket, remotename):
+        """Generates a URL for a blob of the name Remotename.
         
-        #https://googleapis.github.io/google-cloud-dotnet/docs/Google.Cloud.Storage.V1/index.html#signed-urls
-        pass
-
-"""UrlSigner urlSigner = UrlSigner.FromServiceAccountCredential(credential);
-var destination = "places/world.txt";
-string url = urlSigner.Sign(
-    bucketName,
-    destination,
-    TimeSpan.FromHours(1),
-    HttpMethod.Put,
-    contentHeaders: new Dictionary<string, IEnumerable<string>> {
-        { "Content-Type", new[] { "text/plain" } }
-    });"""
+        NOTE up to the generator to not overwrite stuff!"""
+        return self.storageClient.bucket(bucket).blob(remotename).generate_signed_url(method="PUT", expiration=datetime.timedelta(minutes=5))        
 
 if __name__ == '__main__':
     pass
