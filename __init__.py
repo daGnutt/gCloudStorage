@@ -50,6 +50,10 @@ class gCloudStorage():
             self.storageClient.bucket(bucket).blob(remotename).upload_from_file(file_pointer)
         return
 
+    def deleteFile(self, bucket, remotename):
+        self.storageClient.bucket(bucket).blob(remotename).delete()
+        return True
+
     def createUploadURI(self, bucket, remotename, expiration=None):
         """Generates a URL for a blob of the name Remotename.
         
