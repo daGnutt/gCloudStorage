@@ -50,11 +50,17 @@ class gCloudStorage():
             self.storageClient.bucket(bucket).blob(remotename).upload_from_file(file_pointer)
         return
 
-    def createUploadURI(self, bucket, remotename):
+    def createUploadURI(self, bucket, remotename, expiration=None):
         """Generates a URL for a blob of the name Remotename.
         
         NOTE up to the generator to not overwrite stuff!"""
-        return self.storageClient.bucket(bucket).blob(remotename).generate_signed_url(method="PUT", expiration=datetime.timedelta(minutes=5))        
+        if expiration is None:
+            expiration = datetime.timedelta(minutes=5)
+
+        if not isinstance(expiration, datetime.datetime):
+            raise TypeError("Timeout should be {}, it was {}".format(datetime.datetime, type(expiration)))
+    
+        return self.storageClient.bucket(bucket).blob(remotename).generate_signed_url(method="PUT", expiration=expiration)
 
 if __name__ == '__main__':
     pass
