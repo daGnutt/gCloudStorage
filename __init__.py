@@ -61,7 +61,7 @@ class gCloudStorage():
         if expiration is None:
             expiration = datetime.timedelta(minutes=5)
 
-        if not isinstance(expiration, datetime.datetime):
+        if not isinstance(expiration, datetime.timedelta):
             raise TypeError("Timeout should be {}, it was {}".format(datetime.datetime, type(expiration)))
     
         return self.storageClient.bucket(bucket).blob(remotename).generate_signed_url(method="PUT", expiration=expiration)
