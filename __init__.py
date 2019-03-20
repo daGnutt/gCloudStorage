@@ -3,6 +3,7 @@
 import datetime
 import io
 import os
+import re
 
 from google.cloud import storage
 from google.oauth2 import service_account
@@ -53,6 +54,20 @@ class gCloudStorage():
     def deleteFile(self, bucket, remotename):
         self.storageClient.bucket(bucket).blob(remotename).delete()
         return True
+
+    def generateDownloadURI(self, gsname, expiration=None):
+        if expiration is None:
+            expiration = datetime.timedelta(minutes=5)
+
+        if not isinstance(expiration, datetime.timedelta):
+            raise TypeError("Timeout should be {}, it was {}".format(datetime.datetime, type(expiration)))
+
+        matcher = re.compile(r"^gs:\/\/([a-z_\-\.]+)\/(.+)$")
+        matches = matcher.match(gsname)
+        bucket = matches.group(1)
+        filepath = matches.group(2)
+                
+        return self.storageClient.bucket(bucket).blob(filepath).generate_signed_url(method="GET", expiration=expiration)
 
     def createUploadURI(self, bucket, remotename, expiration=None):
         """Generates a URL for a blob of the name Remotename.
