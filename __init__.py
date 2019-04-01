@@ -52,8 +52,19 @@ class gCloudStorage():
         return
 
     def deleteFile(self, bucket, remotename):
-        self.storageClient.bucket(bucket).blob(remotename).delete()
-        return True
+        blob = self.storageClient.bucket(bucket).blob(remotename)
+        if blob.exists():
+            blob.delete()
+            return True
+        return False
+
+    def extractBucketFromGS(self, gsname):
+        matcher = re.compile(r"^gs:\/\/([a-z_\-\.]+)\/(.+)$")
+        matches = matcher.match(gsname)
+        bucket = matches.group(1)
+        filepath = matches.group(2)
+
+        return bucket, filepath
 
     def generateDownloadURI(self, gsname, expiration=None):
         if expiration is None:
@@ -62,11 +73,7 @@ class gCloudStorage():
         if not isinstance(expiration, datetime.timedelta):
             raise TypeError("Timeout should be {}, it was {}".format(datetime.datetime, type(expiration)))
 
-        matcher = re.compile(r"^gs:\/\/([a-z_\-\.]+)\/(.+)$")
-        matches = matcher.match(gsname)
-        bucket = matches.group(1)
-        filepath = matches.group(2)
-                
+        bucket, filepath = self.extractBucketFromGS(gsname)              
         return self.storageClient.bucket(bucket).blob(filepath).generate_signed_url(method="GET", expiration=expiration)
 
     def createUploadURI(self, bucket, remotename, expiration=None):
